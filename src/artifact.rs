@@ -13,6 +13,7 @@ pub enum Entry {
     Artifact(Artifact),
 }
 
+#[serde(transparent)]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Artifact {
     entries: BTreeMap<String, Entry>,
@@ -40,7 +41,7 @@ impl Artifact {
     }
 
     pub fn insert_debug<T: Debug>(&mut self, name: &str, value: &T) {
-        self.insert(name, Entry::Str(format!("{:?}", value)));
+        self.insert(name, Entry::Str(format!("{:#?}", value)));
     }
 
     pub fn insert_display<T: Display>(&mut self, name: &str, value: &T) {

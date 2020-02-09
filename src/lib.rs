@@ -4,7 +4,7 @@ use ::{
     std::{
         collections::HashMap,
         fs::{self, File, OpenOptions},
-        io::{self, Read, Write},
+        io::{Read, Write},
         path::PathBuf,
     },
 };
@@ -12,13 +12,10 @@ use ::{
 pub mod artifact;
 pub mod error;
 
+pub use artifact::*;
+pub use error::*;
 #[doc(hidden)]
 pub use std::path::Path; // for macros
-
-use crate::{
-    artifact::{Artifact, Mismatch},
-    error::ErrorKind,
-};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EgressConfig {
@@ -36,6 +33,7 @@ impl EgressConfig {
 }
 
 #[must_use]
+#[serde(transparent)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub struct Report {
     mismatches: Vec<Mismatch>,
@@ -60,7 +58,7 @@ impl Report {
                 }
             }
 
-            panic!("Found mismatches.");
+            panic!("End found mismatches; panicking to fail the test.");
         }
     }
 }
@@ -158,6 +156,11 @@ impl Egress {
         }
 
         Ok(Report { mismatches })
+    }
+
+    pub fn close_and_assert_unregressed(self) -> Result<(), ErrorKind> {
+        self.close()?.assert_unregressed();
+        Ok(())
     }
 }
 

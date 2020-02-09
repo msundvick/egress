@@ -1,10 +1,8 @@
 {
-  "entries": {
-    "new_mismatches": {
-      "Str": "{\n  \"mismatches\": [\n    {\n      \"NotEq\": [\n        \"fruits\",\n        {\n          \"Str\": \"[\\n  \\\"apples\\\",\\n  \\\"pears\\\",\\n  \\\"oranges\\\"\\n]\"\n        },\n        {\n          \"Str\": \"[\\n  \\\"apples\\\",\\n  \\\"bananas\\\",\\n  \\\"oranges\\\"\\n]\"\n        }\n      ]\n    }\n  ]\n}"
-    },
-    "reference_mismatches": {
-      "Str": "{\n  \"mismatches\": []\n}"
-    }
+  "new_mismatches": {
+    "Str": "{\n  \"mismatches\": [\n    {\n      \"NotEq\": [\n        \"fruits\",\n        {\n          \"Str\": \"[\\n  \\\"apples\\\",\\n  \\\"pears\\\",\\n  \\\"oranges\\\"\\n]\"\n        },\n        {\n          \"Str\": \"[\\n  \\\"apples\\\",\\n  \\\"bananas\\\",\\n  \\\"oranges\\\"\\n]\"\n        }\n      ]\n    }\n  ]\n}"
+  },
+  "reference_mismatches": {
+    "Str": "{\n  \"mismatches\": []\n}"
   }
 }

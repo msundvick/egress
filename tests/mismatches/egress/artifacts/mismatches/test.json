@@ -1,7 +1,5 @@
 {
-  "entries": {
-    "fruits": {
-      "Str": "[\n  \"apples\",\n  \"bananas\",\n  \"oranges\"\n]"
-    }
+  "fruits": {
+    "Str": "[\n  \"apples\",\n  \"bananas\",\n  \"oranges\"\n]"
   }
 }

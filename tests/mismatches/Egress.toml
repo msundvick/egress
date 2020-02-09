@@ -1,0 +1,2 @@
+root = 'C:\Users\sean\Projects\runecall\egress\tests/mismatches'
+artifact_dir = 'egress/artifacts/'

@@ -1,3 +1,6 @@
+//! A super simple, extremely bare-bones regression test library.
+//!
+
 use ::{
     fs2::FileExt,
     serde::{Deserialize, Serialize},
@@ -34,7 +37,7 @@ impl EgressConfig {
 
 #[must_use]
 #[serde(transparent)]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Report {
     mismatches: Vec<Mismatch>,
 }
@@ -44,10 +47,19 @@ impl Report {
         if !self.mismatches.is_empty() {
             for mismatch in self.mismatches {
                 match mismatch {
-                    Mismatch::NotEq(k, _, _) => println!(
-                        "MISMATCH: entry `{}` not the same as the reference value",
-                        k
-                    ),
+                    Mismatch::NotEq(k, new_value, reference) => {
+                        println!(
+                            "MISMATCH: entry `{}` not the same as the reference value",
+                            k
+                        );
+
+                        println!(
+                            "Reference value:\n{}",
+                            serde_json::to_string(&reference).unwrap()
+                        );
+
+                        println!("New value:\n{}", serde_json::to_string(&new_value).unwrap());
+                    }
                     Mismatch::NotInReference(k, _) => {
                         println!("MISMATCH: entry `{}` does not exist in the reference", k)
                     }
@@ -55,6 +67,7 @@ impl Report {
                         "MISMATCH: entry `{}` exists in the reference but was not found here",
                         k
                     ),
+                    Mismatch::LengthMismatch(k, len, len_ref) => println!("MISMATCH: entry `{}` has length `{}` in the reference but length `{}` in the newly produced artifact.", k, len_ref, len),
                 }
             }
 
@@ -148,7 +161,9 @@ impl Egress {
             if path_to_file.exists() {
                 let mut file = File::open(&path_to_file)?;
                 let reference = serde_json::from_reader(&mut file)?;
-                mismatches.extend(artifact.report_mismatches(&reference));
+                mismatches.extend(
+                    artifact.report_mismatches(path.to_string_lossy().into_owned(), &reference),
+                );
             } else {
                 let mut file = File::create(&path_to_file)?;
                 serde_json::to_writer_pretty(&mut file, artifact)?;

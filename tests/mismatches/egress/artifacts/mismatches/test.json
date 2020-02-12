@@ -1,5 +1,9 @@
 {
   "fruits": {
-    "Str": "[\n  \"apples\",\n  \"bananas\",\n  \"oranges\"\n]"
+    "Json": [
+      "apples",
+      "bananas",
+      "oranges"
+    ]
   }
 }

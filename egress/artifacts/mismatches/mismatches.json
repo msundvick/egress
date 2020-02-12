@@ -1,8 +1,28 @@
 {
   "new_mismatches": {
-    "Str": "{\n  \"mismatches\": [\n    {\n      \"NotEq\": [\n        \"fruits\",\n        {\n          \"Str\": \"[\\n  \\\"apples\\\",\\n  \\\"pears\\\",\\n  \\\"oranges\\\"\\n]\"\n        },\n        {\n          \"Str\": \"[\\n  \\\"apples\\\",\\n  \\\"bananas\\\",\\n  \\\"oranges\\\"\\n]\"\n        }\n      ]\n    }\n  ]\n}"
+    "Json": [
+      {
+        "NotEq": [
+          "fruits",
+          {
+            "Json": [
+              "apples",
+              "pears",
+              "oranges"
+            ]
+          },
+          {
+            "Json": [
+              "apples",
+              "bananas",
+              "oranges"
+            ]
+          }
+        ]
+      }
+    ]
   },
   "reference_mismatches": {
-    "Str": "{\n  \"mismatches\": []\n}"
+    "Json": []
   }
 }

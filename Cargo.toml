@@ -11,6 +11,9 @@ keywords = ["regression", "testing", "test", "regression testing", "persistent"]
 categories = ["development-tools", "development-tools::testing"]
 license = "MPL-2.0"
 
+homepage = "https://github.com/sdleffler/egress"
+repository = "https://github.com/sdleffler/egress"
+
 [dependencies]
 serde = { version = "1.0.104", features = ["derive"] }
 serde_json = "1.0.47"

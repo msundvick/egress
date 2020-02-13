@@ -3,20 +3,12 @@
     "Json": [
       {
         "NotEq": [
-          "fruits",
+          "test::fruits[1]",
           {
-            "Json": [
-              "apples",
-              "pears",
-              "oranges"
-            ]
+            "Json": "pears"
           },
           {
-            "Json": [
-              "apples",
-              "bananas",
-              "oranges"
-            ]
+            "Json": "bananas"
           }
         ]
       }

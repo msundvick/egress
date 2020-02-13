@@ -1,5 +1,38 @@
 //! A super simple, extremely bare-bones regression test library.
 //!
+//! This is very minimal and currently doesn't support all that much
+//! in the way of API, but if all you want is some super basic regression
+//! testing, here it is.
+//!
+//! ## Example
+//!
+//! ```rust
+//! # use egress::egress;
+//! # fn main() {
+//! let mut egress = egress!();
+//! let artifact = egress.artifact("basic_arithmetic");
+//!
+//! let super_complex_test_output_that_could_change_at_any_time = 1 + 1;
+//!
+//! // using `serde::Serialize`:
+//! artifact.insert_serialize("1 + 1 (serde)", &super_complex_test_output_that_could_change_at_any_time);
+//!
+//! // or using `fmt::Debug`:
+//! artifact.insert_debug("1 + 1 (fmt::Debug)", &super_complex_test_output_that_could_change_at_any_time);
+//!
+//! // or using `fmt::Display`:
+//! artifact.insert_display("1 + 1 (fmt::Display)", &super_complex_test_output_that_could_change_at_any_time);
+//!
+//! // More options available; please check the docs.
+//!
+//! egress.close().unwrap().assert_unregressed();
+//! # }
+//! ```
+//!
+//! To see the artifacts produced by this example, check `egress/artifacts/rust_out/basic_arithmetic.json`.
+//!
+
+#![deny(missing_docs)]
 
 use ::{
     fs2::FileExt,
@@ -12,29 +45,31 @@ use ::{
     },
 };
 
-pub mod artifact;
-pub mod error;
+mod artifact;
+mod error;
 
-pub use artifact::*;
-pub use error::*;
+use artifact::Mismatch;
+
+pub use artifact::{Artifact, Entry};
+pub use error::ErrorKind;
 #[doc(hidden)]
 pub use std::path::Path; // for macros
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct EgressConfig {
-    root: PathBuf,
+struct EgressConfig {
     artifact_dir: PathBuf,
 }
 
 impl EgressConfig {
-    pub fn new(path: &Path) -> Self {
+    fn new() -> Self {
         EgressConfig {
-            root: path.to_owned(),
             artifact_dir: PathBuf::from("egress/artifacts/"),
         }
     }
 }
 
+/// Comparison report for newly generated artifacts versus the artifacts stored in
+/// `artifacts_subdir`.
 #[must_use]
 #[serde(transparent)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -43,6 +78,8 @@ pub struct Report {
 }
 
 impl Report {
+    /// If any mismatches were found, this function will iterate through and print info
+    /// about them to stdout, before panicking.
     pub fn assert_unregressed(self) {
         if !self.mismatches.is_empty() {
             for mismatch in self.mismatches {
@@ -76,6 +113,7 @@ impl Report {
     }
 }
 
+/// A testing context. You can open as many as you want, but make sure their `artifact_subdir`s don't collide.
 #[derive(Debug)]
 pub struct Egress {
     file: File,
@@ -85,6 +123,12 @@ pub struct Egress {
 }
 
 impl Egress {
+    /// Open a new `Egress` context, given the path to a directory containing an `Egress.toml` config file
+    /// and a subpath for where this `Egress` context should place its artifacts relative to the configured
+    /// `artifact_subdir`.
+    ///
+    /// If an `Egress.toml` file is not found, one will be initialized with the default values at the directory
+    /// indicated by `config_dir`.
     pub fn open<P, Q>(config_dir: P, artifact_subdir: Q) -> Result<Self, ErrorKind>
     where
         P: AsRef<Path>,
@@ -101,8 +145,7 @@ impl Egress {
 
             config_file.lock_exclusive()?;
 
-            let config_string =
-                toml::ser::to_string_pretty(&EgressConfig::new(config_dir.as_ref()))?;
+            let config_string = toml::ser::to_string_pretty(&EgressConfig::new())?;
             config_file.write_all(config_string.as_bytes())?;
 
             config_file.unlock()?;
@@ -117,8 +160,8 @@ impl Egress {
             toml::de::from_str(&s)?
         };
 
-        let artifact_subdir = config
-            .root
+        let artifact_subdir = config_dir
+            .as_ref()
             .join(&config.artifact_dir)
             .join(artifact_subdir.as_ref());
 
@@ -132,6 +175,8 @@ impl Egress {
         })
     }
 
+    /// Construct a new `Artifact` reference. Any data inserted into the artifact returned
+    /// will be written into a directory inside the `artifact_dir` configured in `Egress.toml`.
     pub fn artifact<P: AsRef<Path>>(&mut self, name: P) -> &mut Artifact {
         let path = name
             .as_ref()
@@ -150,6 +195,9 @@ impl Egress {
         }
     }
 
+    /// Close the testing context and write new artifacts to disk before reporting
+    /// any artifacts which don't match the reference values stored in the `egress/artifacts`
+    /// folder.
     pub fn close(self) -> Result<Report, ErrorKind> {
         let mut mismatches = Vec::new();
 
@@ -173,12 +221,20 @@ impl Egress {
         Ok(Report { mismatches })
     }
 
+    /// Shorthand for `.close()?.assert_unregressed()?`.
     pub fn close_and_assert_unregressed(self) -> Result<(), ErrorKind> {
         self.close()?.assert_unregressed();
         Ok(())
     }
 }
 
+/// Shorthand macro for opening an Egress context, keyed by the `module_path!()`
+/// of the file it's called in.
+///
+/// It can also be called with a path, in which case the `Egress.toml` config file
+/// and `egress` artifact folder will be placed at that path offset from the path
+/// provided by the `CARGO_MANIFEST_DIR` environment variable, which by default is
+/// wherever your `Cargo.toml` is.
 #[macro_export]
 macro_rules! egress {
     () => {{

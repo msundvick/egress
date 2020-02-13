@@ -7,7 +7,7 @@ edition = "2018"
 description = "A super simple, bare-bones regression testing crate."
 readme = "README.md"
 
-keywords = ["regression", "testing", "test", "regression testing", "persistent"]
+keywords = ["regression", "testing", "test", "persistent"]
 categories = ["development-tools", "development-tools::testing"]
 license = "MPL-2.0"
 

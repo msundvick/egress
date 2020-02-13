@@ -10,8 +10,6 @@ to hold the artifacts it writes to disk.
 
 ## Example
 
-## Example
-
 ```rust
 # use egress::egress;
 # fn main() {

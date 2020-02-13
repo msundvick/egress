@@ -11,8 +11,6 @@ to hold the artifacts it writes to disk.
 ## Example
 
 ```rust
-# use egress::egress;
-# fn main() {
 let mut egress = egress!();
 let artifact = egress.artifact("basic_arithmetic");
 
@@ -30,7 +28,6 @@ artifact.insert_display("1 + 1 (fmt::Display)", &super_complex_test_output_that_
 // More options available; please check the docs.
 
 egress.close().unwrap().assert_unregressed();
-# }
 ```
 
 To see the artifacts produced by this example, check `egress/artifacts/rust_out/basic_arithmetic.json`.

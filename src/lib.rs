@@ -58,12 +58,16 @@ pub use std::path::Path; // for macros
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct EgressConfig {
     artifact_dir: PathBuf,
+    atol: Option<f64>,
+    rtol: Option<f64>,
 }
 
 impl EgressConfig {
     fn new() -> Self {
         EgressConfig {
             artifact_dir: PathBuf::from("egress/artifacts/"),
+            atol: Some(0.0),
+            rtol: Some(0.0),
         }
     }
 }
@@ -71,8 +75,8 @@ impl EgressConfig {
 /// Comparison report for newly generated artifacts versus the artifacts stored in
 /// `artifacts_subdir`.
 #[must_use]
-#[serde(transparent)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(transparent)]
 pub struct Report {
     mismatches: Vec<Mismatch>,
 }
@@ -85,29 +89,28 @@ impl Report {
             for mismatch in self.mismatches {
                 match mismatch {
                     Mismatch::NotEq(k, new_value, reference) => {
-                        println!(
+                        eprintln!(
                             "MISMATCH: entry `{}` not the same as the reference value",
                             k
                         );
 
-                        println!(
+                        eprintln!(
                             "Reference value:\n{}",
                             serde_json::to_string(&reference).unwrap()
                         );
 
-                        println!("New value:\n{}", serde_json::to_string(&new_value).unwrap());
+                        eprintln!("New value:\n{}", serde_json::to_string(&new_value).unwrap());
                     }
                     Mismatch::NotInReference(k, _) => {
-                        println!("MISMATCH: entry `{}` does not exist in the reference", k)
+                        eprintln!("MISMATCH: entry `{}` does not exist in the reference", k)
                     }
-                    Mismatch::NotProduced(k, _) => println!(
+                    Mismatch::NotProduced(k, _) => eprintln!(
                         "MISMATCH: entry `{}` exists in the reference but was not found here",
                         k
                     ),
-                    Mismatch::LengthMismatch(k, len, len_ref) => println!("MISMATCH: entry `{}` has length `{}` in the reference but length `{}` in the newly produced artifact.", k, len_ref, len),
+                    Mismatch::LengthMismatch(k, len, len_ref) => eprintln!("MISMATCH: entry `{}` has length `{}` in the reference but length `{}` in the newly produced artifact.", k, len_ref, len),
                 }
             }
-
             panic!("End found mismatches; panicking to fail the test.");
         }
     }
@@ -116,10 +119,12 @@ impl Report {
 /// A testing context. You can open as many as you want, but make sure their `artifact_subdir`s don't collide.
 #[derive(Debug)]
 pub struct Egress {
-    file: File,
-    config: EgressConfig,
     artifact_subdir: PathBuf,
     artifacts: HashMap<PathBuf, Artifact>,
+    /// Set the absolute tolerance (absolute(a - b) <= atol)
+    pub atol: Option<f64>,
+    /// Set the relative tolerance (absolute(a - b) <= rtol * absolute(b))
+    pub rtol: Option<f64>,
 }
 
 impl Egress {
@@ -168,10 +173,10 @@ impl Egress {
         let artifacts = HashMap::new();
 
         Ok(Self {
-            file,
-            config,
             artifact_subdir,
             artifacts,
+            atol: config.atol,
+            rtol: config.rtol,
         })
     }
 
@@ -209,9 +214,12 @@ impl Egress {
             if path_to_file.exists() {
                 let mut file = File::open(&path_to_file)?;
                 let reference = serde_json::from_reader(&mut file)?;
-                mismatches.extend(
-                    artifact.report_mismatches(path.to_string_lossy().into_owned(), &reference),
-                );
+                mismatches.extend(artifact.report_mismatches(
+                    path.to_string_lossy().into_owned(),
+                    &reference,
+                    self.atol,
+                    self.rtol,
+                ));
             } else {
                 let mut file = File::create(&path_to_file)?;
                 serde_json::to_writer_pretty(&mut file, artifact)?;

@@ -12,7 +12,23 @@ use ::{
 
 use crate::ErrorKind;
 
-fn diff_json(mismatches: &mut Vec<Mismatch>, prefix: String, value: &Value, reference: &Value) {
+fn compare_float(a: f64, b: f64, atol: Option<f64>, rtol: Option<f64>) -> bool {
+    match (atol, rtol) {
+        (None, None) => a == b,
+        (None, Some(rtol)) => (a - b) <= rtol * b.abs(),
+        (Some(atol), None) => (a - b).abs() <= atol,
+        (Some(atol), Some(rtol)) => ((a - b) <= rtol * b.abs()) && ((a - b).abs() <= atol),
+    }
+}
+
+fn diff_json(
+    mismatches: &mut Vec<Mismatch>,
+    prefix: String,
+    value: &Value,
+    reference: &Value,
+    atol: Option<f64>,
+    rtol: Option<f64>,
+) {
     use Value::*;
     match (value, reference) {
         (Object(map), Object(reference_map)) => {
@@ -29,7 +45,14 @@ fn diff_json(mismatches: &mut Vec<Mismatch>, prefix: String, value: &Value, refe
                     }
                 };
 
-                diff_json(&mut *mismatches, format!("{}.{}", prefix, k), v, v_ref);
+                diff_json(
+                    &mut *mismatches,
+                    format!("{}.{}", prefix, k),
+                    v,
+                    v_ref,
+                    atol,
+                    rtol,
+                );
             }
 
             for (k, v_ref) in reference_map.iter() {
@@ -71,7 +94,36 @@ fn diff_json(mismatches: &mut Vec<Mismatch>, prefix: String, value: &Value, refe
                         format!("{}[{}]", prefix, i),
                         elem,
                         elem_ref,
+                        atol,
+                        rtol,
                     );
+                }
+            }
+        }
+        (Number(a), Number(b)) => {
+            if let (Some(a), Some(b)) = (a.as_i64(), b.as_i64()) {
+                if a != b {
+                    mismatches.push(Mismatch::NotEq(
+                        prefix,
+                        Entry::Json(a.into()),
+                        Entry::Json(b.into()),
+                    ));
+                }
+            } else if let (Some(a), Some(b)) = (a.as_f64(), b.as_f64()) {
+                if !compare_float(a, b, atol, rtol) {
+                    mismatches.push(Mismatch::NotEq(
+                        prefix,
+                        Entry::Json(a.into()),
+                        Entry::Json(b.into()),
+                    ));
+                }
+            } else {
+                if a != b {
+                    mismatches.push(Mismatch::NotEq(
+                        prefix,
+                        Entry::Json(a.clone().into()),
+                        Entry::Json(b.clone().into()),
+                    ));
                 }
             }
         }
@@ -108,8 +160,8 @@ pub enum Entry {
 /// An `Artifact` is the main object that Egress uses to handle and compare
 /// data produced from your tests. It's basically just a map from string keys
 /// to `Entry`s.
-#[serde(transparent)]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[serde(transparent)]
 pub struct Artifact {
     entries: BTreeMap<String, Entry>,
 }
@@ -172,7 +224,13 @@ impl Artifact {
         self.insert(name, Entry::Json(json_value));
     }
 
-    fn compare_against_reference(&self, prefix: String, reference: &Artifact) -> Vec<Mismatch> {
+    fn compare_against_reference(
+        &self,
+        prefix: String,
+        reference: &Artifact,
+        atol: Option<f64>,
+        rtol: Option<f64>,
+    ) -> Vec<Mismatch> {
         let mut mismatches = Vec::new();
 
         for (k, v) in self.entries.iter() {
@@ -190,9 +248,12 @@ impl Artifact {
             use Entry::*;
             match (v, v_ref) {
                 (Artifact(art), Artifact(art_ref)) => {
-                    mismatches.extend(
-                        art.compare_against_reference(format!("{}::{}", prefix, k), art_ref),
-                    );
+                    mismatches.extend(art.compare_against_reference(
+                        format!("{}::{}", prefix, k),
+                        art_ref,
+                        atol,
+                        rtol,
+                    ));
                 }
                 (Json(json), Json(json_ref)) => {
                     diff_json(
@@ -200,6 +261,8 @@ impl Artifact {
                         format!("{}::{}", prefix, k),
                         json,
                         json_ref,
+                        atol,
+                        rtol,
                     );
                 }
                 (other, other_ref) => {
@@ -226,7 +289,13 @@ impl Artifact {
         mismatches
     }
 
-    pub(crate) fn report_mismatches(&self, prefix: String, reference: &Artifact) -> Vec<Mismatch> {
-        self.compare_against_reference(prefix, reference)
+    pub(crate) fn report_mismatches(
+        &self,
+        prefix: String,
+        reference: &Artifact,
+        atol: Option<f64>,
+        rtol: Option<f64>,
+    ) -> Vec<Mismatch> {
+        self.compare_against_reference(prefix, reference, atol, rtol)
     }
 }

@@ -52,6 +52,7 @@ use artifact::Mismatch;
 
 pub use artifact::{Artifact, Entry};
 pub use error::ErrorKind;
+use prettydiff::diff_chars;
 #[doc(hidden)]
 pub use std::path::Path; // for macros
 
@@ -93,13 +94,9 @@ impl Report {
                             "MISMATCH: entry `{}` not the same as the reference value",
                             k
                         );
-
-                        eprintln!(
-                            "Reference value:\n{}",
-                            serde_json::to_string(&reference).unwrap()
-                        );
-
-                        eprintln!("New value:\n{}", serde_json::to_string(&new_value).unwrap());
+                        let old_s = serde_json::to_string(&reference).unwrap();
+                        let new_s = serde_json::to_string(&new_value).unwrap();
+                        eprintln!("Diff:\n {}", diff_chars(&old_s, &new_s,));
                     }
                     Mismatch::NotInReference(k, _) => {
                         eprintln!("MISMATCH: entry `{}` does not exist in the reference", k)
@@ -108,7 +105,15 @@ impl Report {
                         "MISMATCH: entry `{}` exists in the reference but was not found here",
                         k
                     ),
-                    Mismatch::LengthMismatch(k, len, len_ref) => eprintln!("MISMATCH: entry `{}` has length `{}` in the reference but length `{}` in the newly produced artifact.", k, len_ref, len),
+                    Mismatch::LengthMismatch(k, len, len_ref, new, reference) => {
+                        eprintln!(
+                            "MISMATCH: array length for `{}` was {} but is now {}",
+                            k, len_ref, len
+                        );
+                        let old_s = serde_json::to_string(&reference).unwrap();
+                        let new_s = serde_json::to_string(&new).unwrap();
+                        eprintln!("Diff:\n {}", diff_chars(&old_s, &new_s,));
+                    }
                 }
             }
             panic!("End found mismatches; panicking to fail the test.");

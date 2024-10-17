@@ -66,26 +66,13 @@ fn diff_json(
         }
         (Array(array), Array(array_ref)) => {
             if array.len() != array_ref.len() {
-                if array.len() > array_ref.len() {
-                    for (i, elem) in array.iter().enumerate().skip(array_ref.len()) {
-                        mismatches.push(Mismatch::NotInReference(
-                            format!("{}[{}]", prefix, i),
-                            Entry::Json(elem.clone()),
-                        ));
-                    }
-                } else if array.len() < array_ref.len() {
-                    for (i, elem_ref) in array_ref.iter().enumerate().skip(array.len()) {
-                        mismatches.push(Mismatch::NotProduced(
-                            format!("{}[{}]", prefix, i),
-                            Entry::Json(elem_ref.clone()),
-                        ));
-                    }
-                }
 
                 mismatches.push(Mismatch::LengthMismatch(
                     format!("{}.len()", prefix),
                     array.len(),
                     array_ref.len(),
+                    Entry::Json(array.clone().into()),
+                    Entry::Json(array_ref.clone().into()),
                 ));
             } else {
                 for (i, (elem, elem_ref)) in array.iter().zip(array_ref.iter()).enumerate() {
@@ -171,7 +158,7 @@ pub enum Mismatch {
     NotEq(String, Entry, Entry),
     NotInReference(String, Entry),
     NotProduced(String, Entry),
-    LengthMismatch(String, usize, usize),
+    LengthMismatch(String, usize, usize, Entry, Entry),
 }
 
 impl Artifact {

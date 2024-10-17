@@ -6,13 +6,23 @@ fn mismatches() {
     egress.atol = Some(0.001);
     let artifact = egress.artifact("basic_arithmetic");
 
-    let super_complex_test_output_that_could_change_at_any_time = 2;
+    let super_complex_test_output_that_could_change_at_any_time = 3;
 
     // using `serde::Serialize`:
     artifact
         .insert_serialize(
             "1 + 1 (serde)",
             &super_complex_test_output_that_could_change_at_any_time,
+        )
+        .unwrap();
+
+    artifact
+        .insert_serialize(
+            "MyArray",
+            &[
+                0., 10.1, 50.01, 5., 0., 10.1, 50.01, 5., 0., 10.1, 50.01, 5., 0., 10.1, 50.01, 5.,
+                0., 10.1, 50.01, 5.,
+            ],
         )
         .unwrap();
 
